@@ -144,11 +144,11 @@ function onBeforeSendHeaders(details) {
   if (_isTabChromeInternal(tab_id)) {
     // DNT policy requests: strip cookies
     if (type == "xmlhttprequest" && url.endsWith("/.well-known/dnt-policy.txt")) {
-      // remove Cookie headers
+      // remove Cookie and X-client-data headers
       let newHeaders = [];
       for (let i = 0, count = details.requestHeaders.length; i < count; i++) {
         let header = details.requestHeaders[i];
-        if (header.name.toLowerCase() != "cookie") {
+        if (header.name.toLowerCase() != "cookie" && header.name.toLowerCase() != "x-client-data") {
           newHeaders.push(header);
         }
       }
@@ -192,10 +192,10 @@ function onBeforeSendHeaders(details) {
   if (requestAction == constants.COOKIEBLOCK || requestAction == constants.USER_COOKIE_BLOCK) {
     let newHeaders;
 
-    // GET requests: remove cookie headers, reduce referrer header to origin
+    // GET requests: remove cookie and X-client-data headers, reduce referrer header to origin
     if (details.method == "GET") {
       newHeaders = details.requestHeaders.filter(header => {
-        return (header.name.toLowerCase() != "cookie");
+        return (header.name.toLowerCase() != "cookie" && header.name.toLowerCase() != "x-client-data");
       }).map(header => {
         if (header.name.toLowerCase() == "referer") {
           header.value = header.value.slice(
@@ -226,7 +226,10 @@ function onBeforeSendHeaders(details) {
   if (badger.isDNTSignalEnabled()) {
     details.requestHeaders.push({name: "DNT", value: "1"});
   }
-  return {requestHeaders: details.requestHeaders};
+  // filter out x-client-data headers
+  return {
+    requestHeaders: details.requestHeaders.filter(header => header.name.toLowerCase() != "x-client-data")
+  };
 }
 
 /**
